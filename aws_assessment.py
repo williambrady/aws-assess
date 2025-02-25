@@ -9,8 +9,10 @@ from modules.config import config
 from modules.aws.account import validate_account
 from modules.aws.iam import validate_iam
 from modules.aws.organizations import validate_organizations
+from modules.aws.controltower import validate_control_tower
+from modules.aws.config import validate_aws_config
 
-def run_assessment(profile, region, include_org_checks=True):
+def run_assessment(profile, region, is_management_account, include_org_checks=True, include_control_tower=False):
     '''
     Runs the AWS assessment for a given profile.
     '''
@@ -18,10 +20,16 @@ def run_assessment(profile, region, include_org_checks=True):
     validate_account(profile, region)
     print("\n🔍 Validating IAM Settings...")
     validate_iam(profile, region)
+    print("\n🔍 Validating AWS Config...")
+    validate_aws_config(profile, region, is_management_account)
 
     if include_org_checks:
         print("\n🔍 Validating AWS Organizations...")
         validate_organizations(profile, region)
+
+    if include_control_tower:
+        print("\n🔍 Validating AWS Control Tower...")
+        validate_control_tower(profile, region)
 
 def main():
     '''
@@ -39,22 +47,21 @@ def main():
 
     if args.simple or args.follow:
         print("Starting assessment...\n")
-        run_assessment(profile, region, include_org_checks=True)
+        session = boto3.Session(profile_name=profile, region_name=region)
+        client = session.client("organizations")
+        org_info = client.describe_organization()
+        management_account = org_info['Organization'].get('MasterAccountId')
 
-        if args.follow:
-            # Get the list of accounts in the organization
-            session = boto3.Session(profile_name=profile, region_name=region)
-            client = session.client("organizations")
-            org_info = client.describe_organization()
-            management_account = org_info['Organization'].get('MasterAccountId')
+        is_management = profile == management_account
+        run_assessment(profile, region, is_management, include_org_checks=True, include_control_tower=True)
 
-            if profile == management_account:
-                print("\n🔍 Management account detected. Following into member accounts...\n")
-                accounts = client.list_accounts()
-                for account in accounts["Accounts"]:
-                    if account["Status"] == "ACTIVE":
-                        account_id = account["Id"]
-                        run_assessment(account_id, region, include_org_checks=False)
+        if args.follow and is_management:
+            print("\n🔍 Management account detected. Following into member accounts...\n")
+            accounts = client.list_accounts()
+            for account in accounts["Accounts"]:
+                if account["Status"] == "ACTIVE":
+                    account_id = account["Id"]
+                    run_assessment(account_id, region, is_management_account=False, include_org_checks=False, include_control_tower=False)
 
         print("\n✅ Assessment completed.")
 
