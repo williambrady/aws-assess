@@ -2,7 +2,6 @@
 This module is responsible for validating AWS Control Tower settings in the management account.
 modules/aws/controltower.py
 '''
-import boto3
 import botocore.exceptions
 
 def check_controltower_service_enabled(session):
@@ -59,13 +58,11 @@ def check_security_services(session):
     return cloudtrail_enabled, identity_center_enabled, backup_enabled
 
 # pylint: disable=R0914
-def validate_control_tower(profile, region):
+def validate_control_tower(session):
     '''
     Validate AWS Control Tower settings.
     '''
-    session = boto3.Session(profile_name=profile, region_name=region)
     client = session.client("controltower")
-
     try:
         if not check_controltower_service_enabled(session):
             print("⚠ AWS Control Tower Service is NOT Enabled")

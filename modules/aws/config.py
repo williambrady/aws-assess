@@ -2,10 +2,9 @@
 This module is responsible for validating AWS Config settings.
 modules/aws/config.py
 '''
-import boto3
 import botocore.exceptions
 
-def validate_aws_config(profile, region, is_management_account=True):
+def validate_aws_config(session, is_management_account=True):
     '''
     Validate AWS Config settings.
 
@@ -14,7 +13,6 @@ def validate_aws_config(profile, region, is_management_account=True):
         region (str): AWS region
         is_management_account (bool): Whether the account is the management account.
     '''
-    session = boto3.Session(profile_name=profile, region_name=region)
     client = session.client("config")
 
     try:

@@ -2,10 +2,9 @@
 This module is responsible for validating the AWS account. It checks if the billing and contact information is available.
 modules/aws/account.py
 '''
-import boto3
 import botocore.exceptions
 
-def validate_account(profile, region):
+def validate_account(session):
     '''
     Validate the AWS account by checking if the billing and contact information is available.
 
@@ -16,7 +15,6 @@ def validate_account(profile, region):
     Returns:
         None
     '''
-    session = boto3.Session(profile_name=profile, region_name=region)
     client = session.client("account")
 
     try:
