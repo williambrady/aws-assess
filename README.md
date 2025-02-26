@@ -12,6 +12,7 @@ Validate the following information:
 - Account
     - Account Contact Config
     - Contact Info
+    - [TODO] Billing Summary: Which services are in use?
 - IAM
     - IAM User Settings
         - Password settings
@@ -36,7 +37,7 @@ Validate the following information:
         - If IAM User count !=0 then how many have not been accessed in the last 30 days
         - If IAM User count !=0 then how many have never logged in
     - Roles: Customer Managed in-use
-    - IDP Settings
+    - [TODO] IDP Settings
 - Organizations
     - Part of an Org?
         - Standalone or in an Organization
@@ -54,27 +55,49 @@ Validate the following information:
     - Is it Enabled?
     - Confirm there is an aggregator with Source Type of My organization
 - Security Hub
-    - Enabled
-    - Consolidation settings
+    - Is it Enabled?
+    - Policy check, which Standards are enabled?
+    - Integrations, which are enabled?
+    - Number of Automations: 0 is checkmark, greater than 0 is a warning
+    - Controls: Auto-enable new controls?
+    - Controls: Consolidated control findings?
+    - Enabled Regions
+        - Home region
+        - Additional regions
+    - [TODO] Is a Central policy Enabled?
 - Inspector
-    - Enabled
-    - Consolidation settings
-    - Service coverage
-    - Sending to Security Hub
+    - Is it Enabled?
+    - Account management
+        - Is "Automatically activate Inspector for new member accounts" enabled?
+        - Amazon EC2 scanning Enabled?
+        - Amazon ECR scanning Enabled?
+        - AWS Lambda standard scanning
+        - AWS Lambda code scanning
+        - Count of Accounts where Status is Activated / Count of total accounts in Org
 - Guard Duty
-    - Enabled
-    - Consolidation settings
-    - Service coverage
-    - Sending to Security Hub
+    - Is it Enabled?
+    - Is S3 Protection enabled?
+    - Is EKS Protection enabled?
+    - Is Extended Threat Detection enabled?
+    - Is Runtime monitoring enabled?
+    - Is Malware Protection for EC2 enabled?
+    - Is Malware Protection for S3 enabled?
+    - Is RDS Protection enabled?
+    - Is Lambda Protection enabled?
 - Access Analyzer
-    - External Access monitoring enabled
-    - Unused Access monitoring enabled
+    - Is External Access monitoring enabled
+        - Excluded Accounts
+        - Excluded IAM Users and Roles
+        - Archive rules
+    - Is Unused Access monitoring enabled
+        - Excluded Accounts
+        - Excluded IAM Users and Roles
+        - Archive rules
 - Macie
-    - Enabled
-    - Consolidation settings
-    - Service coverage
-    - Sending to Security Hub
-    - Secrets management configured
+    - Is it Enabled?
+    - New Accounts: Is it enabled automatically?
+    - New Accounts: Is Automated sensitive data discovery enabled?
+
 
 ## Reporting Methods
 

@@ -2,7 +2,6 @@
 This module is responsible for validating IAM settings in the AWS account.
 modules/aws/iam.py
 '''
-import boto3
 import botocore.exceptions
 
 def check_password_policy(client):
@@ -61,11 +60,10 @@ def check_iam_users(client):
     except botocore.exceptions.ClientError as e:
         print(f"❌ AWS API Client error (IAM Users): {e.response['Error']['Message']}")
 
-def validate_iam(profile, region):
+def validate_iam(session):
     '''
     Validate the IAM settings in the AWS account.
     '''
-    session = boto3.Session(profile_name=profile, region_name=region)
     client = session.client("iam")
 
     check_password_policy(client)
