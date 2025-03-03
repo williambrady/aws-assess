@@ -6,14 +6,14 @@ aws_assessment.py
 import argparse
 import boto3
 from modules.config import config
-from modules.aws.account import validate_account
+from modules.aws.account import validate_account, get_support_plan, get_billed_services, get_linked_accounts, get_regional_spend
 from modules.aws.iam import validate_iam
 from modules.aws.organizations import validate_organizations, get_member_accounts, get_organization_info
 from modules.aws.controltower import validate_control_tower
 from modules.aws.config import validate_aws_config
 from modules.aws.securityhub import validate_security_hub
 
-def run_assessment(session, profile, is_management_account, include_org_checks=True, include_control_tower=False):
+def run_assessment(session, profile, is_management, include_org_checks=True, include_control_tower=False):
     '''
     Runs the AWS assessment for a given profile.
 
@@ -21,7 +21,7 @@ def run_assessment(session, profile, is_management_account, include_org_checks=T
         session (boto3.Session): Boto3 session object
         profile (str): AWS profile name
         region (str): AWS region
-        is_management_account (bool): True if the account is the management account, False otherwise.
+        is_management (bool): True if the account is the management account, False otherwise.
         include_org_checks (bool): True to include AWS Organizations checks, False otherwise.
         include_control_tower (bool): True to include AWS Control Tower checks, False otherwise.
 
@@ -30,10 +30,18 @@ def run_assessment(session, profile, is_management_account, include_org_checks=T
     '''
     print(f"\n🔍 Running assessment for profile: {profile}\n")
     validate_account(session)
+    print("\n🔍 AWS Support Plan Settings...")
+    get_support_plan(session)
+    print("\n🔍 Billed Services...")
+    get_billed_services(session)
+    print("\n🔍 Regional Spend...")
+    get_regional_spend(session)
+    print("\n🔍 Linked Accounts...")
+    get_linked_accounts(session)
     print("\n🔍 Validating IAM Settings...")
     validate_iam(session)
     print("\n🔍 Validating AWS Config...")
-    validate_aws_config(session, is_management_account)
+    validate_aws_config(session, is_management)
     print("\n🔍 Validating AWS Security Hub...")
     validate_security_hub(session)
 
@@ -75,10 +83,7 @@ def main():
             accounts = get_member_accounts(global_session)
             for account in accounts:
                 specific_session = boto3.Session(profile_name=account, region_name=region)
-                run_assessment(specific_session, account, is_management_account=False, include_org_checks=False, include_control_tower=False)
-    else:
-        # print the help message
-        parser.print_help()
+                run_assessment(specific_session, account, is_management=False, include_org_checks=False, include_control_tower=False)
 
     print("\n✅ Assessment completed.")
 

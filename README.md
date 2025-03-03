@@ -12,7 +12,12 @@ Validate the following information:
 - Account
     - Account Contact Config
     - Contact Info
-    - [TODO] Billing Summary: Which services are in use?
+    - Billing Summary
+        - Which level of Support is enabled?
+        - Which services are in use?
+        - Which accounts are linked to this payer?
+        - Are there any linked accounts that are not in the Organization?
+        - Which regions have spend greater than $0? Treat Global as a region
 - IAM
     - IAM User Settings
         - Password settings
