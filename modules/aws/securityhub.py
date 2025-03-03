@@ -56,6 +56,7 @@ def validate_security_hub(session):
     '''
     client = session.client("securityhub")
 
+    # pylint: disable=R1702
     try:
         hub_status = client.describe_hub()
         print("✔ AWS Security Hub is Enabled")
