@@ -5,6 +5,20 @@ modules/aws/account.py
 import datetime
 import botocore.exceptions
 
+def get_account_id(session):
+    '''
+    Retrieve the AWS account ID.
+
+    Args:
+        session (boto3.Session): AWS session object
+
+    Returns:
+        str: AWS account ID
+    '''
+    client = session.client("sts")
+    account_id = client.get_caller_identity()["Account"]
+    return account_id
+
 def validate_account(session):
     '''
     Validate the AWS account by checking if the billing and contact information is available.
@@ -126,37 +140,42 @@ def get_billed_services(session):
 
 def get_linked_accounts(session):
     '''
-    Retrieve a list of accounts linked to the current account as the master payer.
-    If the account is outside the organization, denote it with a warning.
-
-    Args:
-        session (boto3.Session): Boto3 session object
-
-    Returns:
-        list: A list of linked AWS account IDs and names.
+    Determines the current account's AWS Organizations role:
+    - If the account is the management (payer) account, list all member accounts.
+    - If the account is a member, print its management account ID.
+    - If not in an org, indicate it's a standalone account.
     '''
     client = session.client("organizations")
+
+    print("\n🔍 AWS Organization Membership...")
+
     try:
-        response = client.list_accounts()
-        linked_accounts = [
-            f"  - {account['Id']}: {account['Name']}"
-            for account in response.get("Accounts", [])
-        ]
+        # Describe the org itself
+        org_response = client.describe_organization()
+        org = org_response["Organization"]
+        master_account_id = org.get("MasterAccountId")
+        current_account_id = session.client("sts").get_caller_identity()["Account"]
 
-        if linked_accounts:
-            print("✔ Linked AWS Accounts:")
-            for account in linked_accounts:
-                print(account)
+        if current_account_id == master_account_id:
+            print(f"✔ This account is the Organization Management Account (Payer): {master_account_id}")
+
+            # List all accounts in the org
+            paginator = client.get_paginator("list_accounts")
+            print("✔ Linked Accounts:")
+            for page in paginator.paginate():
+                for acct in page.get("Accounts", []):
+                    if acct["Status"] == "ACTIVE":
+                        print(f"  - {acct['Id']}: {acct['Name']}")
         else:
-            print("⚠ No linked accounts found or account is outside an AWS Organization.")
-        return linked_accounts
+            print(f"✔ This is a Member Account in Org: {org.get('Id')}")
+            print(f"✔ Management Account ID: {master_account_id}")
 
+    except client.exceptions.AWSOrganizationsNotInUseException:
+        print("✔ This account is standalone and not part of an AWS Organization.")
     except botocore.exceptions.ClientError as e:
-        print(f"❌ AWS API Client error (Linked Accounts): {e.response['Error']['Message']}")
-        return []
+        print(f"❌ AWS Client error (Organizations): {e.response['Error']['Message']}")
     except botocore.exceptions.BotoCoreError as e:
-        print(f"❌ BotoCore error: {str(e)}")
-        return []
+        print(f"❌ BotoCore error (Organizations): {str(e)}")
 
 def get_regional_spend(session):
     '''
