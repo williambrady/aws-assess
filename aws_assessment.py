@@ -6,14 +6,14 @@ aws_assessment.py
 import argparse
 import boto3
 from modules.config import config
-from modules.aws.account import validate_account, get_support_plan, get_billed_services, get_linked_accounts, get_regional_spend
+from modules.aws.account import validate_account, get_support_plan, get_billed_services, get_linked_accounts, get_regional_spend, get_account_id
 from modules.aws.iam import validate_iam
 from modules.aws.organizations import validate_organizations, get_member_accounts, get_organization_info
 from modules.aws.controltower import validate_control_tower
 from modules.aws.config import validate_aws_config
 from modules.aws.securityhub import validate_security_hub
 
-def run_assessment(session, profile, is_management, include_org_checks=True, include_control_tower=False):
+def run_assessment(session, profile, region, is_management, include_org_checks=True, include_control_tower=False):
     '''
     Runs the AWS assessment for a given profile.
 
@@ -28,7 +28,8 @@ def run_assessment(session, profile, is_management, include_org_checks=True, inc
     Returns:
         None
     '''
-    print(f"\n🔍 Running assessment for profile: {profile}\n")
+    aws_account_id = get_account_id(session)
+    print(f"\n🔍 Running assessment for profile: {profile}, {aws_account_id}, {region} \n")
     validate_account(session)
     print("\n🔍 AWS Support Plan Settings...")
     get_support_plan(session)
@@ -36,7 +37,7 @@ def run_assessment(session, profile, is_management, include_org_checks=True, inc
     get_billed_services(session)
     print("\n🔍 Regional Spend...")
     get_regional_spend(session)
-    print("\n🔍 Linked Accounts...")
+    print("\n🔍 Checking Accounts Relationships...")
     get_linked_accounts(session)
     print("\n🔍 Validating IAM Settings...")
     validate_iam(session)
@@ -75,7 +76,7 @@ def main():
         # Determine if this is the management account
         org_id, management_account = get_organization_info(global_session)
         is_management = profile == management_account
-        run_assessment(global_session, profile, is_management, include_org_checks=True, include_control_tower=True)
+        run_assessment(global_session, profile, region, is_management, include_org_checks=True, include_control_tower=True)
 
         if args.follow and is_management:
             print(f"\n🔍 Management account detected for Org {org_id}. Following into member accounts...\n")
@@ -83,7 +84,7 @@ def main():
             accounts = get_member_accounts(global_session)
             for account in accounts:
                 specific_session = boto3.Session(profile_name=account, region_name=region)
-                run_assessment(specific_session, account, is_management=False, include_org_checks=False, include_control_tower=False)
+                run_assessment(specific_session, account, region, is_management=False, include_org_checks=False, include_control_tower=False)
 
     print("\n✅ Assessment completed.")
 
