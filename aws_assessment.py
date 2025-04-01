@@ -8,6 +8,7 @@ import boto3
 from modules.config import config
 from modules.aws.account import validate_account, get_support_plan, get_billed_services, get_linked_accounts, get_regional_spend, get_account_id
 from modules.aws.iam import validate_iam
+from modules.aws.inspector import validate_inspector
 from modules.aws.organizations import validate_organizations, get_member_accounts, get_organization_info
 from modules.aws.controltower import validate_control_tower
 from modules.aws.config import validate_aws_config
@@ -45,6 +46,8 @@ def run_assessment(session, profile, region, is_management, include_org_checks=T
     validate_aws_config(session, is_management)
     print("\n🔍 Validating AWS Security Hub...")
     validate_security_hub(session)
+    print("\n🔍 Validating AWS Inspector...")
+    validate_inspector(session)
 
     if include_org_checks:
         print("\n🔍 Validating AWS Organizations...")

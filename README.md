@@ -79,8 +79,8 @@ Validate the following information:
         - Amazon ECR scanning Enabled?
         - AWS Lambda standard scanning
         - AWS Lambda code scanning
-        - Count of Accounts where Status is Activated / Count of total accounts in Org
-- Guard Duty
+        - [TODO] Count of Accounts where Status is Activated / Count of total accounts in Org
+- [TODO] Guard Duty
     - Is it Enabled?
     - Is S3 Protection enabled?
     - Is EKS Protection enabled?
@@ -90,7 +90,7 @@ Validate the following information:
     - Is Malware Protection for S3 enabled?
     - Is RDS Protection enabled?
     - Is Lambda Protection enabled?
-- Access Analyzer
+- [TODO] Access Analyzer
     - Is External Access monitoring enabled
         - Excluded Accounts
         - Excluded IAM Users and Roles
@@ -99,7 +99,7 @@ Validate the following information:
         - Excluded Accounts
         - Excluded IAM Users and Roles
         - Archive rules
-- Macie
+- [TODO] Macie
     - Is it Enabled?
     - New Accounts: Is it enabled automatically?
     - New Accounts: Is Automated sensitive data discovery enabled?
