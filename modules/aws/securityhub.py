@@ -54,43 +54,53 @@ def validate_security_hub(session):
     '''
     Validate AWS Security Hub settings.
     '''
-    client = session.client("securityhub")
+    region = session.region_name
 
-    # pylint: disable=R1702
-    try:
-        hub_status = client.describe_hub()
-        print("✔ AWS Security Hub is Enabled")
+    us_regions = ["us-east-1", "us-east-2", "us-west-1", "us-west-2"]
+    checked_regions = set()
 
-        get_security_hub_standards(client)
-        get_security_hub_integrations(client)
-        check_automation_rules(client)
+    print("\n🔍 Validating AWS Security Hub...")
 
-        print(f"✔ Auto-enable new controls: {hub_status.get('AutoEnableControls', False)}")
-        print(f"✔ Consolidated Control Findings: {hub_status.get('ControlFindingGenerator', 'NOT SET')}")
+    def perform_check(region_to_check):
+        try:
+            temp_client = session.client("securityhub", region_name=region_to_check)
+            hub_status = temp_client.describe_hub()
+            print(f"✔ AWS Security Hub is Enabled in {region_to_check}")
 
-        # Retrieve finding aggregators
-        finding_aggregators = client.list_finding_aggregators().get("FindingAggregators", [])
+            get_security_hub_standards(temp_client)
+            get_security_hub_integrations(temp_client)
+            check_automation_rules(temp_client)
 
-        if finding_aggregators:
-            for aggregator in finding_aggregators:
-                aggregator_arn = aggregator.get("FindingAggregatorArn")
-                if aggregator_arn:
-                    # Query details about the aggregator
-                    aggregator_details = client.get_finding_aggregator(FindingAggregatorArn=aggregator_arn)
-                    finding_aggregation_region = aggregator_details.get("FindingAggregationRegion", "Unknown")
-                    region_linking_mode = aggregator_details.get("RegionLinkingMode", "Unknown")
-                    linked_regions = aggregator_details.get("Regions", [])
+            print(f"✔ Auto-enable new controls: {hub_status.get('AutoEnableControls', False)}")
+            print(f"✔ Consolidated Control Findings: {hub_status.get('ControlFindingGenerator', 'NOT SET')}")
 
-                    print("✔ Security Hub Aggregation Details:")
-                    print(f"  - Finding Aggregation Region: {finding_aggregation_region}")
-                    print(f"  - Region Linking Mode: {region_linking_mode}")
-                    print("  - Linked Regions:")
-                    for region in sorted(linked_regions):
-                        print(f"    - {region}")
+            finding_aggregators = temp_client.list_finding_aggregators().get("FindingAggregators", [])
+            if finding_aggregators:
+                for aggregator in finding_aggregators:
+                    aggregator_arn = aggregator.get("FindingAggregatorArn")
+                    if aggregator_arn:
+                        aggregator_details = temp_client.get_finding_aggregator(FindingAggregatorArn=aggregator_arn)
+                        print("✔ Security Hub Aggregation Details:")
+                        print(f"  - Finding Aggregation Region: {aggregator_details.get('FindingAggregationRegion', 'Unknown')}")
+                        print(f"  - Region Linking Mode: {aggregator_details.get('RegionLinkingMode', 'Unknown')}")
+                        for r in sorted(aggregator_details.get('Regions', [])):
+                            print(f"    - {r}")
+        except botocore.exceptions.ClientError as e:
+            code = e.response.get("Error", {}).get("Code", "")
+            if code in ["ResourceNotFoundException", "InvalidAccessException"]:
+                print(f"⚠ AWS Security Hub is not enabled in {region_to_check}")
+            else:
+                print(f"❌ AWS API Client error (Security Hub - {region_to_check}): {e.response['Error']['Message']}")
+        except botocore.exceptions.BotoCoreError as e:
+            print(f"❌ BotoCore error (Security Hub - {region_to_check}): {str(e)}")
 
-    except botocore.exceptions.ClientError as e:
-        print(f"❌ AWS API Client error (Security Hub): {e.response['Error']['Message']}")
-    except botocore.exceptions.BotoCoreError as e:
-        print(f"❌ BotoCore error: {str(e)}")
-    finally:
-        session = None
+    # Check default region first
+    perform_check(region)
+    checked_regions.add(region)
+
+    # Check remaining US regions
+    for r in us_regions:
+        if r not in checked_regions:
+            perform_check(r)
+
+    session = None

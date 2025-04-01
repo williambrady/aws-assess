@@ -61,6 +61,7 @@ Validate the following information:
     - Confirm there is an aggregator with Source Type of My organization
 - Security Hub
     - Is it Enabled?
+        - Check all US regions.
     - Policy check, which Standards are enabled?
     - Integrations, which are enabled?
     - Number of Automations: 0 is checkmark, greater than 0 is a warning
