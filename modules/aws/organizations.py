@@ -78,11 +78,11 @@ def validate_delegated_admins(session):
     try:
         delegated_admins = client.list_delegated_administrators()
         if delegated_admins.get("DelegatedAdministrators"):
-            print("✔ Delegated Admins:")
+            print("✔ Delegated Admin:")
             for admin in delegated_admins["DelegatedAdministrators"]:
                 account_id = admin.get("Id", "Unknown")
-                email = admin.get("Email", "Unknown")
-                print(f"  - {account_id}: {email}")
+                name = admin.get("Name", "Unknown")
+                print(f"  - {account_id}: {name}")
         else:
             print("✔ No Delegated Admins Configured")
     except botocore.exceptions.ClientError as e:
