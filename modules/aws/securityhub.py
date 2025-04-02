@@ -59,8 +59,6 @@ def validate_security_hub(session):
     us_regions = ["us-east-1", "us-east-2", "us-west-1", "us-west-2"]
     checked_regions = set()
 
-    print("\n🔍 Validating AWS Security Hub...")
-
     def perform_check(region_to_check):
         try:
             temp_client = session.client("securityhub", region_name=region_to_check)

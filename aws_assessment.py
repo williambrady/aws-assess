@@ -14,6 +14,7 @@ from modules.aws.organizations import validate_organizations, get_member_account
 from modules.aws.controltower import validate_control_tower
 from modules.aws.config import validate_aws_config
 from modules.aws.securityhub import validate_security_hub
+from modules.aws.guardduty import validate_guardduty
 
 @dataclass
 class AssessmentOptions:
@@ -61,6 +62,8 @@ def run_assessment(options: AssessmentOptions):
     validate_security_hub(options.session)
     print("\n🔍 Validating AWS Inspector...")
     validate_inspector(options.session)
+    print("\n🔍 Validating AWS GuardDuty...")
+    validate_guardduty(options.session)
 
     if options.include_org_checks:
         print("\n🔍 Validating AWS Organizations...")
