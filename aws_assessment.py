@@ -4,6 +4,7 @@ and calling the appropriate functions to perform the assessment.
 aws_assessment.py
 '''
 import argparse
+from dataclasses import dataclass
 import boto3
 from modules.config import config
 from modules.aws.account import validate_account, get_support_plan, get_billed_services, get_linked_accounts, get_regional_spend, get_account_id
@@ -14,7 +15,19 @@ from modules.aws.controltower import validate_control_tower
 from modules.aws.config import validate_aws_config
 from modules.aws.securityhub import validate_security_hub
 
-def run_assessment(session, profile, region, is_management, include_org_checks=True, include_control_tower=False):
+@dataclass
+class AssessmentOptions:
+    '''
+    Data class to hold assessment options.
+    '''
+    session: boto3.Session
+    profile: str
+    region: str
+    is_management: bool
+    include_org_checks: bool = True
+    include_control_tower: bool = False
+
+def run_assessment(options: AssessmentOptions):
     '''
     Runs the AWS assessment for a given profile.
 
@@ -29,33 +42,33 @@ def run_assessment(session, profile, region, is_management, include_org_checks=T
     Returns:
         None
     '''
-    aws_account_id = get_account_id(session)
-    print(f"\n🔍 Running assessment for profile: {profile}, {aws_account_id}, {region} \n")
-    validate_account(session)
+    aws_account_id = get_account_id(options.session)
+    print(f"\n🔍 Running assessment for profile: {options.profile}, {aws_account_id}, {options.region} \n")
+    validate_account(options.session)
     print("\n🔍 AWS Support Plan Settings...")
-    get_support_plan(session)
+    get_support_plan(options.session)
     print("\n🔍 Billed Services...")
-    get_billed_services(session)
+    get_billed_services(options.session)
     print("\n🔍 Regional Spend...")
-    get_regional_spend(session)
+    get_regional_spend(options.session)
     print("\n🔍 Checking Accounts Relationships...")
-    get_linked_accounts(session)
+    get_linked_accounts(options.session)
     print("\n🔍 Validating IAM Settings...")
-    validate_iam(session)
+    validate_iam(options.session)
     print("\n🔍 Validating AWS Config...")
-    validate_aws_config(session, is_management)
+    validate_aws_config(options.session, options.is_management)
     print("\n🔍 Validating AWS Security Hub...")
-    validate_security_hub(session)
+    validate_security_hub(options.session)
     print("\n🔍 Validating AWS Inspector...")
-    validate_inspector(session)
+    validate_inspector(options.session)
 
-    if include_org_checks:
+    if options.include_org_checks:
         print("\n🔍 Validating AWS Organizations...")
-        validate_organizations(session, profile)
+        validate_organizations(options.session, options.profile)
 
-    if include_control_tower:
+    if options.include_control_tower:
         print("\n🔍 Validating AWS Control Tower...")
-        validate_control_tower(session)
+        validate_control_tower(options.session)
 
 def main():
     '''
@@ -79,7 +92,16 @@ def main():
         # Determine if this is the management account
         org_id, management_account = get_organization_info(global_session)
         is_management = profile == management_account
-        run_assessment(global_session, profile, region, is_management, include_org_checks=True, include_control_tower=True)
+
+        options = AssessmentOptions(
+            session=global_session,
+            profile=profile,
+            region=region,
+            is_management=is_management,
+            include_org_checks=True,
+            include_control_tower=True
+        )
+        run_assessment(options)
 
         if args.follow and is_management:
             print(f"\n🔍 Management account detected for Org {org_id}. Following into member accounts...\n")
@@ -87,7 +109,15 @@ def main():
             accounts = get_member_accounts(global_session)
             for account in accounts:
                 specific_session = boto3.Session(profile_name=account, region_name=region)
-                run_assessment(specific_session, account, region, is_management=False, include_org_checks=False, include_control_tower=False)
+                options = AssessmentOptions(
+                    session=specific_session,
+                    profile=account,
+                    region=region,
+                    is_management=False,
+                    include_org_checks=True,
+                    include_control_tower=False
+                )
+                run_assessment(options)
 
     print("\n✅ Assessment completed.")
 
