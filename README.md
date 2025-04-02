@@ -80,7 +80,7 @@ Validate the following information:
         - AWS Lambda standard scanning
         - AWS Lambda code scanning
         - [TODO] Count of Accounts where Status is Activated / Count of total accounts in Org
-- [TODO] Guard Duty
+- Guard Duty
     - Is it Enabled?
     - Is S3 Protection enabled?
     - Is EKS Protection enabled?
