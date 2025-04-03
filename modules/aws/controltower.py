@@ -6,11 +6,43 @@ import botocore.exceptions
 
 def check_controltower_service_enabled(session):
     '''
-    Check if AWS Control Tower service is enabled.
+    Check if AWS Control Tower service is enabled by inspecting IAM roles and policies.
+    Returns:
+        tuple: (bool, str) where bool indicates if Control Tower is enabled,
+               and str is the managing account ID if available.
     '''
-    org_client = session.client("organizations")
-    services = org_client.list_aws_service_access_for_organization()
-    return any(service["ServicePrincipal"] == "controltower.amazonaws.com" for service in services["EnabledServicePrincipals"])
+    iam = session.client("iam")
+
+    try:
+        # Check if the AWSControlTowerExecution role exists
+        iam.get_role(RoleName="AWSControlTowerExecution")
+        print("✔ AWSControlTowerExecution role found.")
+
+        # Check trust policy to find managing account
+        trust_policy = iam.get_role(RoleName="AWSControlTowerExecution")["Role"]["AssumeRolePolicyDocument"]
+        # print(f"DEBUG: Trust Policy: {trust_policy}")
+
+        statements = trust_policy.get("Statement", [])
+        for stmt in statements:
+            principal = stmt.get("Principal", {})
+            if isinstance(principal, dict) and "AWS" in principal:
+                arn = principal["AWS"]
+                if isinstance(arn, str) and ":iam::" in arn:
+                    # Extract AWS account ID from ARN
+                    parts = arn.split(":")
+                    if len(parts) > 4:
+                        return True, parts[4]
+
+        return True, None
+
+    except iam.exceptions.NoSuchEntityException:
+        return False, None
+    except botocore.exceptions.ClientError as e:
+        print(f"❌ AWS API Client error (Control Tower): {e.response['Error']['Message']}")
+        return False, None
+    except botocore.exceptions.BotoCoreError as e:
+        print(f"❌ BotoCore error (Control Tower): {str(e)}")
+        return False, None
 
 def get_landing_zone_info(client):
     '''
@@ -57,41 +89,72 @@ def check_security_services(session):
 
     return cloudtrail_enabled, identity_center_enabled, backup_enabled
 
-# pylint: disable=R0914
 def validate_control_tower(session):
     '''
     Validate AWS Control Tower settings.
     '''
+    print("\n🔍 Validating AWS Control Tower...")
+
+    enabled, managing_account = check_controltower_service_enabled(session)
+    if not enabled:
+        print("⚠ AWS Control Tower Service is NOT Enabled")
+        return
+
+    print("✔ AWS Control Tower Service is Enabled")
+    if managing_account:
+        print(f"✔ This account is managed by Control Tower management account: {managing_account}")
+
+    # Validate landing zones
     client = session.client("controltower")
+
     try:
-        if not check_controltower_service_enabled(session):
-            print("⚠ AWS Control Tower Service is NOT Enabled")
-            return
-        print("✔ AWS Control Tower Service is Enabled")
-
-        landing_zone_id, home_region, root_id = get_landing_zone_info(client)
-        if not landing_zone_id:
+        response = client.list_landing_zones()
+        landing_zones = response.get("landingZones", [])
+        if landing_zones:
+            print(f"✔ Landing Zones found: {len(landing_zones)}")
+        else:
             print("⚠ No Landing Zones found in Control Tower.")
-            return
-
-        print(f"✔ Control Tower Landing Zone Identifier: {landing_zone_id}")
-        print(f"✔ Control Tower Home Region: {home_region}")
-
-        ou_client = session.client("organizations")
-        registered_ous = ou_client.list_organizational_units_for_parent(ParentId=root_id)
-        enrolled_count, total_accounts = get_enrolled_accounts(ou_client)
-        managed_regions, region_deny_enabled = get_control_settings(client, landing_zone_id)
-        cloudtrail_enabled, identity_center_enabled, backup_enabled = check_security_services(session)
-
-        print(f"✔ Registered Organizational Units (OUs): {len(registered_ous['OrganizationalUnits'])}")
-        print(f"✔ Enrolled Accounts: {enrolled_count}/{total_accounts}")
-        print(f"✔ Managed Landing Zone Regions: {managed_regions}")
-        print(f"✔ Region Deny Control Enabled: {region_deny_enabled}")
-        print(f"✔ AWS CloudTrail Enabled: {cloudtrail_enabled}")
-        print(f"✔ AWS IAM Identity Center Enabled: {identity_center_enabled}")
-        print(f"✔ AWS Backup Enabled: {backup_enabled}")
-
     except botocore.exceptions.ClientError as e:
         print(f"❌ AWS API Client error (Control Tower): {e.response['Error']['Message']}")
     except botocore.exceptions.BotoCoreError as e:
-        print(f"❌ BotoCore error: {str(e)}")
+        print(f"❌ BotoCore error (Control Tower): {str(e)}")
+
+# pylint: disable=R0914
+# def validate_control_tower(session):
+#     '''
+#     Validate AWS Control Tower settings.
+#     '''
+#     client = session.client("controltower")
+#     try:
+#         if not check_controltower_service_enabled(session):
+#             print("⚠ AWS Control Tower Service is NOT Enabled")
+#             return
+#         print("✔ AWS Control Tower Service is Enabled")
+
+#         landing_zone_id, home_region, root_id = get_landing_zone_info(client)
+#         if not landing_zone_id:
+#             print("⚠ No Landing Zones found in Control Tower.")
+#             return
+
+#         print(f"✔ Control Tower Landing Zone Identifier: {landing_zone_id}")
+#         print(f"✔ Control Tower Home Region: {home_region}")
+
+#         ou_client = session.client("organizations")
+#         registered_ous = ou_client.list_organizational_units_for_parent(ParentId=root_id)
+#         enrolled_count, total_accounts = get_enrolled_accounts(ou_client)
+#         managed_regions, region_deny_enabled = get_control_settings(client, landing_zone_id)
+#         cloudtrail_enabled, identity_center_enabled, backup_enabled = check_security_services(session)
+
+#         print(f"✔ Registered Organizational Units (OUs): {len(registered_ous['OrganizationalUnits'])}")
+#         print(f"✔ Enrolled Accounts: {enrolled_count}/{total_accounts}")
+#         print(f"✔ Managed Landing Zone Regions: {managed_regions}")
+#         print(f"✔ Region Deny Control Enabled: {region_deny_enabled}")
+#         print(f"✔ AWS CloudTrail Enabled: {cloudtrail_enabled}")
+#         print(f"✔ AWS IAM Identity Center Enabled: {identity_center_enabled}")
+#         print(f"✔ AWS Backup Enabled: {backup_enabled}")
+
+#     except botocore.exceptions.ClientError as e:
+#         print(f"❌ AWS API Client error (Control Tower): {e.response['Error']['Message']}")
+#         print(f"DEBUG: Full error response: {e.response}")
+#     except botocore.exceptions.BotoCoreError as e:
+#         print(f"❌ BotoCore error: {str(e)}")
