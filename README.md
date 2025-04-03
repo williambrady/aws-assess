@@ -53,9 +53,8 @@ Validate the following information:
     - Delegated Admin settings
 - Control Tower
     - Is it Enabled?
-    - Identify the Security Audit Account
-    - Identify the Security Logging Account
-    - IAM Identity Management Settings
+    - Identify the management account
+    - Number of deployed Landing Zones
 - Config
     - Is it Enabled?
     - Confirm there is an aggregator with Source Type of My organization
